@@ -1,0 +1,8 @@
+in the fetcher file :
+    created read_json to extract names from a json of news websites
+    created fetcher (simple version to extract html from a single url hardcoded)
+        stumbled upon an ssl certificate problem ( verifies if website is legit )
+        fixed using the certifi package and adding "ssl_context = ssl.create_default_context(cafile=certifi.where())"
+        => returns all the page but i need only text
+        fixed but the solution needed me to inspect each website ( no good )
+        ok == lots happened (ended up creating a news_sites.json that has url + pattern for scraping

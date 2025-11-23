@@ -1,0 +1,6 @@
+asyncio
+aiohttp
+beautifulsoup4
+concurrent.futures
+json
+newspaper4k

@@ -1,0 +1,22 @@
+{
+    "bbc": {
+        "base_url": "https://www.bbc.com/news",
+        "pattern": "/news/articles/"
+    },
+    "nbc": {
+        "base_url": "https://www.nbcnews.com/politics",
+        "pattern": "/politics/"
+    },
+    "sky": {
+        "base_url": "https://news.sky.com/politics",
+        "pattern": "/story/"
+    },
+    "cbs": {
+        "base_url": "https://www.cbsnews.com",
+        "pattern": "/news/"
+    },
+    "aljazeera": {
+        "base_url": "https://www.aljazeera.com/",
+        "pattern": "/news/"
+    }
+}
