@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Distributed News Crawler - Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .site-block {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .article {
+      padding: 10px;
+      border-left: 4px solid #0077ff;
+      margin-bottom: 15px;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+    .article h3 {
+      margin-top: 0;
+    }
+    .top-image {
+      max-width: 200px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Distributed News Crawler - Visualization Dashboard</h1>
+
+  <div class="container" id="content"></div>
+
+  <script>
+    async function loadData() {
+      const response = await fetch("results.json"); // Place your results.json next to this HTML file
+      const data = await response.json();
+
+      const container = document.getElementById("content");
+
+      // Group articles by website
+      const grouped = {};
+      data.forEach(article => {
+        const site = new URL(article.url).hostname;
+        if (!grouped[site]) grouped[site] = [];
+        grouped[site].push(article);
+      });
+
+      // Render
+      for (const site in grouped) {
+        const block = document.createElement("div");
+        block.className = "site-block";
+
+        block.innerHTML = `<h2>🌐 ${site}</h2>`;
+
+        grouped[site].forEach(article => {
+          const articleDiv = document.createElement("div");
+          articleDiv.className = "article";
+
+          articleDiv.innerHTML = `
+            <h3>${article.title}</h3>
+            <p><strong>Authors:</strong> ${article.authors.join(", ") || "Unknown"}</p>
+            <p>${article.text}</p>
+            ${article.top_image ? `<img src="${article.top_image}" class="top-image" />` : ""}
+            <p><a href="${article.url}" target="_blank">Read full article</a></p>
+          `;
+
+          block.appendChild(articleDiv);
+        });
+
+        container.appendChild(block);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
