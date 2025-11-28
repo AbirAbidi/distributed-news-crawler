@@ -4,92 +4,118 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Distributed News Crawler - Dashboard</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-      color: #333;
-    }
-    h1 {
-      text-align: center;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .site-block {
-      background: #fff;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .article {
-      padding: 10px;
-      border-left: 4px solid #0077ff;
-      margin-bottom: 15px;
-      background: #f9f9f9;
-      border-radius: 4px;
-    }
-    .article h3 {
-      margin-top: 0;
-    }
-    .top-image {
-      max-width: 200px;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <link rel="stylesheet" href="./index.css">
 </head>
 <body>
-  <h1>Distributed News Crawler - Visualization Dashboard</h1>
+  <div class="header">
+    <h1>Distributed News Crawler Dashboard</h1>
+    <p>Parallel & Distributed Systems Project</p>
 
-  <div class="container" id="content"></div>
+  </div>
 
-  <script>
-    async function loadData() {
-      const response = await fetch("results.json"); // Place your results.json next to this HTML file
-      const data = await response.json();
+  <div class="control-panel">
+    <div class="system-info">
+      <h3>💻 System Resources</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="label">CPU Cores</div>
+          <div class="value" id="cpu-cores">Detecting...</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Recommended Max Threads</div>
+          <div class="value" id="max-threads">Calculating...</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Available Memory</div>
+          <div class="value" id="memory">~4-8GB</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Current Status</div>
+          <div class="value">
+            <span class="status idle" id="crawler-status">IDLE</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      const container = document.getElementById("content");
+    <div class="control-row">
+      <div class="control-group">
+        <label for="thread-count">Threads per Site</label>
+        <input type="number" id="thread-count" min="1" max="20" value="5" />
+        <div class="warning" id="thread-warning"></div>
+      </div>
 
-      // Group articles by website
-      const grouped = {};
-      data.forEach(article => {
-        const site = new URL(article.url).hostname;
-        if (!grouped[site]) grouped[site] = [];
-        grouped[site].push(article);
-      });
+      <div class="control-group">
+        <label for="articles-per-site">Articles per Site</label>
+        <input type="number" id="articles-per-site" min="1" max="50" value="5" />
+      </div>
 
-      // Render
-      for (const site in grouped) {
-        const block = document.createElement("div");
-        block.className = "site-block";
+      <div class="control-group">
+        <label for="crawl-mode">Crawling Mode</label>
+        <select id="crawl-mode">
+          <option value="parallel">Parallel (Multi-threading)</option>
+          <option value="sequential">Sequential (Single-threaded)</option>
+          <option value="comparison">⭐ Run All & Compare</option>
+        </select>
+      </div>
+    </div>
 
-        block.innerHTML = `<h2>🌐 ${site}</h2>`;
+    <div class="button-group">
+      <button class="btn-primary" onclick="startCrawler()">▶️ Start Crawling</button>
+      <button class="btn-secondary" onclick="loadResults()">🔄 Load Results</button>
+      <button class="btn-success" onclick="loadPerformanceMetrics()">📊 Load Metrics</button>
+    </div>
 
-        grouped[site].forEach(article => {
-          const articleDiv = document.createElement("div");
-          articleDiv.className = "article";
+    <div class="progress-bar" style="display:none;" id="progress-container">
+      <div class="progress-fill" id="progress" style="width: 0%">0%</div>
+    </div>
 
-          articleDiv.innerHTML = `
-            <h3>${article.title}</h3>
-            <p><strong>Authors:</strong> ${article.authors.join(", ") || "Unknown"}</p>
-            <p>${article.text}</p>
-            ${article.top_image ? `<img src="${article.top_image}" class="top-image" />` : ""}
-            <p><a href="${article.url}" target="_blank">Read full article</a></p>
-          `;
+    <div class="stats">
+      <div class="stat-card">
+        <div class="number" id="total-articles">0</div>
+        <div class="label">Total Articles</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="total-sites">5</div>
+        <div class="label">News Sources</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="crawl-time">0s</div>
+        <div class="label">Best Time</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="speedup">0x</div>
+        <div class="label">Max Speedup</div>
+      </div>
+    </div>
+  </div>
 
-          block.appendChild(articleDiv);
-        });
+  <div class="chart-container">
+    <h2>📊 Performance Comparison</h2>
+    <canvas id="performanceChart"></canvas>
+  </div>
 
-        container.appendChild(block);
-      }
-    }
+  <div class="content">
+    <div class="tabs">
+      <button class="tab active" onclick="switchView('all')">All Articles</button>
+      <button class="tab" onclick="switchView('by-site')">By Website</button>
+    </div>
 
-    loadData();
-  </script>
+    <div id="view-content">
+      <div class="site-nav" id="site-navigation"></div>
+      <div id="articles-container">
+        <div class="empty-state">
+          <h3>📭 No articles loaded yet</h3>
+          <p>Click "Load Results" to view crawled articles, or "Start Crawling" to begin a new crawl</p>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="./index.js"></script>
+
 </body>
 </html>
+
