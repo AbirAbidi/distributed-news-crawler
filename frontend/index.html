@@ -54,7 +54,6 @@
         <label for="crawl-mode">Crawling Mode</label>
         <select id="crawl-mode">
           <option value="parallel">Parallel (Multi-threading)</option>
-          <option value="sequential">Sequential (Single-threaded)</option>
           <option value="comparison">⭐ Run All & Compare</option>
         </select>
       </div>
@@ -62,8 +61,6 @@
 
     <div class="button-group">
       <button class="btn-primary" onclick="startCrawler()">▶️ Start Crawling</button>
-      <button class="btn-secondary" onclick="loadResults()">📄 Load Results</button>
-      <button class="btn-success" onclick="loadPerformanceMetrics()">📊 Load Metrics</button>
     </div>
 
     <div class="stats">
@@ -92,16 +89,13 @@
   </div>
 
   <div class="content">
-    <div class="tabs">
-      <button class="tab active" onclick="switchView('all')">All Articles</button>
-      <button class="tab" onclick="switchView('by-site')">By Website</button>
-    </div>
+
 
     <div id="view-content">
       <div class="site-nav" id="site-navigation"></div>
       <div id="articles-container">
         <div class="empty-state">
-          <h3>🔭 No articles loaded yet</h3>
+          <h3>No articles loaded yet</h3>
           <p>Click "Start Crawling" to begin fetching articles</p>
         </div>
       </div>

@@ -10,6 +10,39 @@ const siteColors = {
   'aljazeera': '#f27d00'
 };
 
+
+
+
+
+// Storage utilities
+const Storage = {
+  saveResults(data) {
+    sessionStorage.setItem('crawlerResults', JSON.stringify(data));
+    console.log('[+] Results saved to sessionStorage');
+  },
+
+  loadResults() {
+    const data = sessionStorage.getItem('crawlerResults');
+    return data ? JSON.parse(data) : null;
+  },
+
+  saveMetrics(data) {
+    sessionStorage.setItem('crawlerMetrics', JSON.stringify(data));
+    console.log('[+] Metrics saved to sessionStorage');
+  },
+
+  loadMetrics() {
+    const data = sessionStorage.getItem('crawlerMetrics');
+    return data ? JSON.parse(data) : null;
+  },
+
+  clearAll() {
+    sessionStorage.removeItem('crawlerResults');
+    sessionStorage.removeItem('crawlerMetrics');
+    console.log('[+] All data cleared from sessionStorage');
+  }
+};
+
 // Detect system capabilities
 function detectSystemCapabilities() {
   const cores = navigator.hardwareConcurrency || 4;
@@ -27,12 +60,31 @@ function detectSystemCapabilities() {
     const warning = document.getElementById('thread-warning');
 
     if (value > recommendedThreads) {
-      warning.textContent = `⚠️ Using more than ${recommendedThreads} threads may impact performance`;
+      warning.textContent = `[!] Using more than ${recommendedThreads} threads may impact performance`;
     } else {
       warning.textContent = '';
     }
   });
+
+   document.getElementById('crawl-mode').addEventListener('change', (e) => {
+    const selectedMode = e.target.value;
+    const threadInput = document.getElementById('thread-count');
+    const articlesInput = document.getElementById('articles-per-site');
+
+    if (selectedMode === 'comparison') {
+      threadInput.disabled = true;
+      articlesInput.disabled = true;
+    } else {
+      threadInput.disabled = false;
+      articlesInput.disabled = false;
+    }
+  });
+
+
+
 }
+
+
 
 // Initialize performance chart
 function initChart() {
@@ -81,9 +133,12 @@ function initChart() {
         tooltip: {
           callbacks: {
             afterLabel: function(context) {
-              const baseTime = Math.max(...context.dataset.data);
-              const speedup = baseTime / context.parsed.y;
-              return `Speedup: ${speedup.toFixed(2)}x`;
+              if (context.dataset.data.some(v => v > 0)) {
+                const baseTime = Math.max(...context.dataset.data.filter(v => v > 0));
+                const speedup = baseTime / context.parsed.y;
+                return `Speedup: ${speedup.toFixed(2)}x`;
+              }
+              return '';
             }
           }
         }
@@ -109,8 +164,11 @@ async function startCrawler() {
 
   console.log('Starting crawler with:', { mode, threadCount, articlesPerSite });
 
+  // Clear old data before starting new crawl
+  Storage.clearAll();
+
   // Show modal
-  showModal(mode, articlesPerSite);
+  showModal(mode, articlesPerSite, threadCount);
 
   const payload = {
     mode,
@@ -146,17 +204,16 @@ async function startCrawler() {
   } catch (error) {
     console.error('Start crawler error:', error);
     closeModal();
-    alert('❌ Error starting crawler: ' + error.message + '\n\nMake sure the API server is running:\npython app.py');
+    alert('[!] Error starting crawler: ' + error.message + '\n\nMake sure the API server is running:\npython app.py');
   }
 }
 
-function showModal(mode, articles) {
+function showModal(mode, articles, threads) {
   const modal = document.getElementById('progressModal');
   modal.classList.add('active');
 
   const modeNames = {
-    'sequential': 'Sequential (Single-threaded)',
-    'parallel': 'Parallel (Multi-threading)',
+    'parallel': `Parallel (${threads} threads) vs Sequential `,
     'comparison': 'All Methods Comparison'
   };
 
@@ -186,7 +243,6 @@ async function pollCrawlerStatus(estimatedTime) {
       const response = await fetch("http://localhost:8000/status");
       const status = await response.json();
 
-      console.log("Crawler status:", status); // Debug logging
 
       // Calculate progress based on time elapsed
       const elapsed = (Date.now() - startTime) / 1000;
@@ -205,10 +261,10 @@ async function pollCrawlerStatus(estimatedTime) {
 
         setTimeout(() => {
           closeModal();
-          // Auto-load results
+          // Auto-load results from files and cache them
           loadResults();
           loadPerformanceMetrics();
-          alert('✅ Crawling completed successfully!\n\nResults have been loaded into the dashboard.');
+          alert('[+] Crawling completed successfully!\n\nResults have been loaded into the dashboard.');
         }, 1000);
         return;
       }
@@ -217,7 +273,7 @@ async function pollCrawlerStatus(estimatedTime) {
       if (!status.running && status.progress === 0 && elapsed > 5) {
         clearInterval(pollInterval);
         closeModal();
-        alert('❌ Crawler failed: ' + (status.message || 'Unknown error'));
+        alert('[!] Crawler failed: ' + (status.message || 'Unknown error'));
         return;
       }
 
@@ -227,7 +283,7 @@ async function pollCrawlerStatus(estimatedTime) {
         updateProgress(100);
         setTimeout(() => {
           closeModal();
-          alert('⏱️ Crawler finished (timeout reached).\n\nCheck results manually by clicking "Load Results".');
+          alert('[*] Crawler finished (timeout reached).\n\nCheck results manually by clicking "Load Results".');
         }, 500);
       }
 
@@ -248,19 +304,29 @@ function updateProgress(percent) {
   percentText.textContent = Math.round(percent) + '%';
 }
 
-// Load results from JSON
+// Load results from JSON file or cache
 async function loadResults() {
   try {
-    const response = await fetch("./results.json");
-    if (!response.ok) throw new Error('File not found');
+    // Try to load from cache first
+    let data = Storage.loadResults();
 
-    const text = await response.text();
-    let data = [];
-    try {
-      data = text ? JSON.parse(text) : [];
-    } catch (e) {
-      console.warn("JSON empty or invalid, returning empty array");
-      data = [];
+    if (!data) {
+      // If not in cache, fetch from file
+      const response = await fetch("./results.json");
+      if (!response.ok) throw new Error('File not found');
+
+      const text = await response.text();
+      try {
+        data = text ? JSON.parse(text) : [];
+      } catch (e) {
+        console.warn("JSON empty or invalid, returning empty array");
+        data = [];
+      }
+
+      // Save to cache for future use
+      if (data && data.length > 0) {
+        Storage.saveResults(data);
+      }
     }
 
     crawlerData = data.map(article => ({
@@ -273,23 +339,33 @@ async function loadResults() {
 
   } catch (error) {
     console.error('Load results error:', error);
-    alert('❌ Could not load results.json\n\nMake sure the crawler has completed at least once.');
+    alert('[!] Could not load results.json\n\nMake sure the crawler has completed at least once.');
   }
 }
 
-// Load performance metrics
+// Load performance metrics from JSON file or cache
 async function loadPerformanceMetrics() {
   try {
-    const response = await fetch("./performance_metrics.json");
-    if (!response.ok) throw new Error('File not found');
+    // Try to load from cache first
+    let metrics = Storage.loadMetrics();
 
-    const text = await response.text();
-    let metrics = {};
-    try {
-      metrics = text ? JSON.parse(text) : {};
-    } catch (e) {
-      console.warn("JSON empty or invalid, returning empty object");
-      metrics = {};
+    if (!metrics) {
+      // If not in cache, fetch from file
+      const response = await fetch("./performance_metrics.json");
+      if (!response.ok) throw new Error('File not found');
+
+      const text = await response.text();
+      try {
+        metrics = text ? JSON.parse(text) : {};
+      } catch (e) {
+        console.warn("JSON empty or invalid, returning empty object");
+        metrics = {};
+      }
+
+      // Save to cache for future use
+      if (Object.keys(metrics).length > 0) {
+        Storage.saveMetrics(metrics);
+      }
     }
 
     // Update chart
@@ -297,7 +373,7 @@ async function loadPerformanceMetrics() {
     const times = [];
 
     for (const [method, data] of Object.entries(metrics)) {
-      let label = method.replace('_', ' ').replace('threaded', 'Parallel');
+      let label = method.replace(/_/g, ' ').replace('threaded', 'Parallel');
       label = label.charAt(0).toUpperCase() + label.slice(1);
       labels.push(label);
       times.push(data.time);
@@ -330,7 +406,7 @@ function renderArticles() {
   if (crawlerData.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
-        <h3>🔭 No articles loaded</h3>
+        <h3>[*] No articles loaded</h3>
         <p>Click "Start Crawling" to begin fetching articles</p>
       </div>`;
     return;
@@ -349,7 +425,7 @@ function renderArticles() {
   navigation.innerHTML = sites.map(site => {
     const count = site === 'all' ? crawlerData.length : siteCounts[site];
     return `<button class="site-btn ${site === currentSite ? 'active' : ''}" onclick="filterBySite('${site}')">
-      ${site === 'all' ? '🌐 All Sites' : '📰 ' + site.toUpperCase()}
+      ${site === 'all' ? '[*] All Sites' : '[+] ' + site.toUpperCase()}
       <span class="badge">${count}</span>
     </button>`;
   }).join('');
@@ -374,18 +450,18 @@ function renderArticles() {
       <h3>${article.title || 'Untitled'}</h3>
       <div class="article-meta">
         <div class="meta-item">
-          <strong>👤</strong> ${article.authors?.join(", ") || "Unknown"}
+          <strong>[*]</strong> ${article.authors?.join(", ") || "Unknown"}
         </div>
         <div class="meta-item">
-          <strong>🌐</strong> ${article.site?.toUpperCase() || 'Unknown'}
+          <strong>[+]</strong> ${article.site?.toUpperCase() || 'Unknown'}
         </div>
-        ${article.crawled_at ? `<div class="meta-item"><strong>🕒</strong> ${new Date(article.crawled_at).toLocaleString()}</div>` : ''}
+        ${article.crawled_at ? `<div class="meta-item"><strong>[T]</strong> ${new Date(article.crawled_at).toLocaleString()}</div>` : ''}
       </div>
       <p>${article.text || 'No content available'}</p>
       ${article.top_image ? `<img src="${article.top_image}" class="top-image" alt="Article image" onerror="this.style.display='none'" />` : ''}
       <p style="margin-top: 10px;">
         <a href="${article.url}" target="_blank" style="color: ${siteColor}; font-weight: 600; text-decoration: none;">
-          Read full article →
+          Read full article ->
         </a>
       </p>
     </div>
@@ -413,7 +489,7 @@ function switchView(view) {
 detectSystemCapabilities();
 initChart();
 
-// Try to load data on startup
+// Try to load data on startup (from cache or files)
 loadResults().catch(() => {
   console.log("No results found on startup");
 });

@@ -67,7 +67,8 @@ async def start_crawler(request: CrawlerRequest):
     if request.mode == "sequential":
         crawler_status["estimated_time"] = base_time
     elif request.mode == "parallel":
-        crawler_status["estimated_time"] = base_time / request.threadCount
+        # For parallel mode: run sequential + parallel, so roughly 2x base time divided by threadCount
+        crawler_status["estimated_time"] = (base_time + base_time / request.threadCount)
     else:  # comparison
         crawler_status["estimated_time"] = base_time * 7  # All modes
 
@@ -80,20 +81,19 @@ async def start_crawler(request: CrawlerRequest):
 
     python_mode = mode_map.get(request.mode, "comparison")
 
-    # Get paths based on your structure:
-    # endpoints/app.py (current file)
-    # crawler/orchestrator.py (target)
+    # Get paths based on your structure
     endpoints_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(endpoints_dir)  # Go up to "Distributed News Crawler"
+    project_root = os.path.dirname(endpoints_dir)
     crawler_dir = os.path.join(project_root, "crawler")
 
-    # Print for debugging
     print(f"\n{'=' * 70}")
     print(f"[DEBUG] Endpoints directory: {endpoints_dir}")
     print(f"[DEBUG] Project root: {project_root}")
     print(f"[DEBUG] Crawler directory: {crawler_dir}")
-    print(f"[DEBUG] Orchestrator path: {os.path.join(crawler_dir, 'orchestrator.py')}")
-    print(f"[DEBUG] Orchestrator exists: {os.path.exists(os.path.join(crawler_dir, 'orchestrator.py'))}")
+    print(f"[DEBUG] Mode: {python_mode}")
+    print(f"[DEBUG] Articles: {request.articlesPerSite}")
+    if request.mode == "parallel":
+        print(f"[DEBUG] Threads: {request.threadCount}")
     print(f"{'=' * 70}\n")
 
     cmd = [
@@ -103,6 +103,7 @@ async def start_crawler(request: CrawlerRequest):
         str(request.articlesPerSite)
     ]
 
+    # For parallel mode, add thread count as third argument
     if request.mode == "parallel":
         cmd.append(str(request.threadCount))
 
@@ -117,7 +118,7 @@ async def start_crawler(request: CrawlerRequest):
             # Run the subprocess from crawler directory
             process = subprocess.Popen(
                 cmd,
-                cwd=crawler_dir,  # Run from crawler directory
+                cwd=crawler_dir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True
@@ -163,7 +164,7 @@ async def start_crawler(request: CrawlerRequest):
         "message": "Crawler started",
         "mode": request.mode,
         "estimated_time": crawler_status["estimated_time"],
-        "command": " ".join(cmd),
+        "command": " '.join(cmd)",
         "working_dir": crawler_dir
     }
 

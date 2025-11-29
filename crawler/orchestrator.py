@@ -26,11 +26,13 @@ class CrawlerMetrics:
 
 
 # Get the project root directory
-# crawler/orchestrator.py -> go up one level to project root
 CRAWLER_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CRAWLER_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+
+# Ensure frontend directory exists
+os.makedirs(FRONTEND_DIR, exist_ok=True)
 
 print(f"[DEBUG] Project root: {PROJECT_ROOT}")
 print(f"[DEBUG] Data directory: {DATA_DIR}")
@@ -270,14 +272,91 @@ def hybrid_crawl(sites, max_articles, num_processes=2, num_threads=5):
 
 
 # ---------------------------
-# COMPARISON RUNNER
+# PARALLEL vs SEQUENTIAL COMPARISON
+# ---------------------------
+def run_parallel_vs_sequential_comparison(sites_json, max_articles, num_threads):
+    """Compare ONLY parallel vs sequential for user-chosen thread count"""
+    sites = load_sites(sites_json)
+
+    print("\n" + "=" * 70)
+    print("PARALLEL vs SEQUENTIAL COMPARISON")
+    print("=" * 70)
+    print(f"[*] News sources: {', '.join(sites.keys())}")
+    print(f"[*] Articles per site: {max_articles}")
+    print(f"[*] Threads (Parallel): {num_threads}")
+    print("=" * 70)
+
+    results_comparison = {}
+    final_results = None
+
+    # 1. Sequential
+    print("\n[1/2] Running Sequential...")
+    seq_results, seq_time = sequential_crawl(sites, max_articles)
+    results_comparison['sequential'] = {
+        'time': seq_time,
+        'articles': len(seq_results),
+        'speedup': 1.0
+    }
+    final_results = seq_results
+
+    # 2. Threaded with user-chosen thread count
+    print(f"\n[2/2] Running Parallel ({num_threads} threads)...")
+    parallel_results, parallel_time = threaded_crawl(sites, max_articles, num_threads)
+    results_comparison[f'threaded_{num_threads}'] = {
+        'time': parallel_time,
+        'articles': len(parallel_results),
+        'speedup': seq_time / parallel_time if parallel_time > 0 else 0
+    }
+
+    # Print results table
+    print("\n" + "=" * 70)
+    print("COMPARISON RESULTS")
+    print("=" * 70)
+    print(f"{'Method':<25} {'Time (s)':<12} {'Articles':<10} {'Speedup':<10}")
+    print("-" * 70)
+    for method, data in results_comparison.items():
+        print(f"{method:<25} {data['time']:>10.2f}s  {data['articles']:>8}  {data['speedup']:>8.2f}x")
+    print("=" * 70)
+
+    # Find best method
+    best_method = min(results_comparison.items(), key=lambda x: x[1]['time'])
+    print(f"\n[+] WINNER: {best_method[0].upper()}")
+    print(f"    Time: {best_method[1]['time']:.2f}s")
+    print(f"    Speedup: {best_method[1]['speedup']:.2f}x over sequential")
+
+    # Save results using absolute paths
+    results_file = os.path.join(FRONTEND_DIR, "results.json")
+    metrics_file = os.path.join(FRONTEND_DIR, "performance_metrics.json")
+
+    print(f"\n[*] Saving results...")
+    try:
+        with open(results_file, "w", encoding="utf-8") as f:
+            json.dump(final_results, f, indent=4, ensure_ascii=False)
+        print(f"    [+] Articles saved to {results_file}")
+    except Exception as e:
+        print(f"    [-] Error saving results: {e}")
+
+    try:
+        with open(metrics_file, "w", encoding="utf-8") as f:
+            json.dump(results_comparison, f, indent=4)
+        print(f"    [+] Metrics saved to {metrics_file}")
+    except Exception as e:
+        print(f"    [-] Error saving metrics: {e}")
+
+    print("\n[+] Comparison complete! Open frontend/index.html to view results in dashboard.")
+
+    return results_comparison
+
+
+# ---------------------------
+# FULL COMPARISON RUNNER (All 7 methods)
 # ---------------------------
 def run_comparison(sites_json, max_articles=5):
     """Run all approaches and compare performance"""
     sites = load_sites(sites_json)
 
     print("\n" + "=" * 70)
-    print("CRAWLING PERFORMANCE COMPARISON")
+    print("CRAWLING PERFORMANCE COMPARISON (All 7 Methods)")
     print("=" * 70)
     print(f"[*] News sources: {', '.join(sites.keys())}")
     print(f"[*] Articles per site: {max_articles}")
@@ -354,13 +433,19 @@ def run_comparison(sites_json, max_articles=5):
     metrics_file = os.path.join(FRONTEND_DIR, "performance_metrics.json")
 
     print(f"\n[*] Saving results...")
-    with open(results_file, "w", encoding="utf-8") as f:
-        json.dump(final_results, f, indent=4, ensure_ascii=False)
-    print(f"    [+] Articles saved to {results_file}")
+    try:
+        with open(results_file, "w", encoding="utf-8") as f:
+            json.dump(final_results, f, indent=4, ensure_ascii=False)
+        print(f"    [+] Articles saved to {results_file}")
+    except Exception as e:
+        print(f"    [-] Error saving results: {e}")
 
-    with open(metrics_file, "w", encoding="utf-8") as f:
-        json.dump(results_comparison, f, indent=4)
-    print(f"    [+] Metrics saved to {metrics_file}")
+    try:
+        with open(metrics_file, "w", encoding="utf-8") as f:
+            json.dump(results_comparison, f, indent=4)
+        print(f"    [+] Metrics saved to {metrics_file}")
+    except Exception as e:
+        print(f"    [-] Error saving metrics: {e}")
 
     print("\n[+] All done! Open frontend/index.html to view results in dashboard.")
 
@@ -384,30 +469,24 @@ if __name__ == "__main__":
     results_file = os.path.join(FRONTEND_DIR, "results.json")
 
     if mode == "sequential":
+        print("\n[*] Running SEQUENTIAL ONLY...")
         results, _ = sequential_crawl(sites, max_articles)
-        with open(results_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
+        try:
+            with open(results_file, "w", encoding="utf-8") as f:
+                json.dump(results, f, indent=4, ensure_ascii=False)
+            print(f"[+] Results saved to {results_file}")
+        except Exception as e:
+            print(f"[-] Error saving results: {e}")
 
     elif mode == "threaded":
         num_threads = int(sys.argv[3]) if len(sys.argv) > 3 else 5
-        results, _ = threaded_crawl(sites, max_articles, num_threads)
-        with open(results_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
+        print(f"\n[*] Running PARALLEL vs SEQUENTIAL COMPARISON (threads={num_threads})...")
+        run_parallel_vs_sequential_comparison(sites_json, max_articles, num_threads)
 
-    elif mode == "multiprocess":
-        results, _ = multiprocess_crawl(sites, max_articles)
-        with open(results_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
-
-    elif mode == "async":
-        results, _ = asyncio.run(async_crawl(sites, max_articles))
-        with open(results_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
-
-    elif mode == "hybrid":
-        results, _ = hybrid_crawl(sites, max_articles)
-        with open(results_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
+    elif mode == "comparison":
+        print("\n[*] Running FULL COMPARISON (All 7 methods)...")
+        run_comparison(sites_json, max_articles)
 
     else:
-        run_comparison(sites_json, max_articles)
+        print(f"[-] Unknown mode: {mode}")
+        print("[*] Available modes: sequential, threaded, comparison")
