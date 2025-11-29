@@ -6,7 +6,7 @@ def is_probable_article(url, pattern):
     return pattern in url
 def parse_article(url):
     """Download + parse one article with Newspaper3k."""
-    print(f"\n🔎 Parsing: {url}")
+    print(f"\n Parsing: {url}")
     article = newspaper.Article(url)
     try:
         article.download()

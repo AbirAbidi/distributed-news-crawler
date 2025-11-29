@@ -9,9 +9,8 @@
 </head>
 <body>
   <div class="header">
-    <h1>Distributed News Crawler Dashboard</h1>
+    <h1>🌐 Distributed News Crawler Dashboard</h1>
     <p>Parallel & Distributed Systems Project</p>
-
   </div>
 
   <div class="control-panel">
@@ -63,12 +62,8 @@
 
     <div class="button-group">
       <button class="btn-primary" onclick="startCrawler()">▶️ Start Crawling</button>
-      <button class="btn-secondary" onclick="loadResults()">🔄 Load Results</button>
+      <button class="btn-secondary" onclick="loadResults()">📄 Load Results</button>
       <button class="btn-success" onclick="loadPerformanceMetrics()">📊 Load Metrics</button>
-    </div>
-
-    <div class="progress-bar" style="display:none;" id="progress-container">
-      <div class="progress-fill" id="progress" style="width: 0%">0%</div>
     </div>
 
     <div class="stats">
@@ -106,10 +101,68 @@
       <div class="site-nav" id="site-navigation"></div>
       <div id="articles-container">
         <div class="empty-state">
-          <h3>📭 No articles loaded yet</h3>
-          <p>Click "Load Results" to view crawled articles, or "Start Crawling" to begin a new crawl</p>
-
+          <h3>🔭 No articles loaded yet</h3>
+          <p>Click "Start Crawling" to begin fetching articles</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Modal -->
+  <div class="modal-overlay" id="progressModal">
+    <div class="modal-content">
+      <button class="close-modal" onclick="closeModal()">×</button>
+
+      <div class="modal-header">
+        <div class="modal-icon">⚙️</div>
+        <h2>Crawling in Progress</h2>
+        <p id="modal-subtitle">Please wait while we fetch articles...</p>
+      </div>
+
+      <div class="progress-circle">
+        <svg class="progress-ring" width="120" height="120">
+          <circle
+            class="progress-ring-circle"
+            stroke="#e0e0e0"
+            stroke-width="8"
+            fill="transparent"
+            r="52"
+            cx="60"
+            cy="60"
+          />
+          <circle
+            class="progress-ring-circle"
+            id="progressCircle"
+            stroke="#667eea"
+            stroke-width="8"
+            fill="transparent"
+            r="52"
+            cx="60"
+            cy="60"
+            stroke-dasharray="326.7256359733385"
+            stroke-dashoffset="326.7256359733385"
+          />
+        </svg>
+        <div class="progress-text" id="progressPercent">0%</div>
+      </div>
+
+      <div class="modal-details">
+        <div class="detail-row">
+          <span class="detail-label">Mode</span>
+          <span class="detail-value" id="modal-mode">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Articles per Site</span>
+          <span class="detail-value" id="modal-articles">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Status</span>
+          <span class="detail-value" id="modal-status">Starting...</span>
+        </div>
+      </div>
+
+      <div class="time-estimate" id="timeEstimate">
+        Estimated time: calculating...
       </div>
     </div>
   </div>
@@ -118,4 +171,3 @@
 
 </body>
 </html>
-
