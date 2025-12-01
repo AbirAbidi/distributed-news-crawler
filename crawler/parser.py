@@ -2,10 +2,10 @@ import newspaper
 
 
 def is_probable_article(url, pattern):
-    """Check if a URL matches the site's article pattern."""
     return pattern in url
+
+
 def parse_article(url):
-    """Download + parse one article with Newspaper3k."""
     print(f"\n Parsing: {url}")
     article = newspaper.Article(url)
     try:

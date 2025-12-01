@@ -45,10 +45,10 @@ const Storage = {
 
 // Detect system capabilities
 function detectSystemCapabilities() {
-  const cores = navigator.hardwareConcurrency || 4;
+  const cores = navigator.hardwareConcurrency ;
   document.getElementById('cpu-cores').textContent = cores;
 
-  const recommendedThreads = Math.max(cores * 2, 8);
+  const recommendedThreads = cores * 2;
   document.getElementById('max-threads').textContent = recommendedThreads;
 
   if (navigator.deviceMemory) {

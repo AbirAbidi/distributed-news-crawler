@@ -35,7 +35,6 @@ crawler_status = {
     "message": ""
 }
 
-
 @app.get("/")
 async def root():
     return {"message": "News Crawler API is running"}
@@ -62,7 +61,7 @@ async def start_crawler(request: CrawlerRequest):
 
     # Estimate time based on mode and articles
     sites_count = 5
-    base_time = request.articlesPerSite * sites_count * 2  # ~2 seconds per article
+    base_time = request.articlesPerSite * sites_count * 4  # ~2 seconds per article
 
     if request.mode == "sequential":
         crawler_status["estimated_time"] = base_time
@@ -72,7 +71,6 @@ async def start_crawler(request: CrawlerRequest):
     else:  # comparison
         crawler_status["estimated_time"] = base_time * 7  # All modes
 
-    # Build command
     mode_map = {
         "sequential": "sequential",
         "parallel": "threaded",
@@ -81,20 +79,10 @@ async def start_crawler(request: CrawlerRequest):
 
     python_mode = mode_map.get(request.mode, "comparison")
 
-    # Get paths based on your structure
     endpoints_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(endpoints_dir)
     crawler_dir = os.path.join(project_root, "crawler")
 
-    print(f"\n{'=' * 70}")
-    print(f"[DEBUG] Endpoints directory: {endpoints_dir}")
-    print(f"[DEBUG] Project root: {project_root}")
-    print(f"[DEBUG] Crawler directory: {crawler_dir}")
-    print(f"[DEBUG] Mode: {python_mode}")
-    print(f"[DEBUG] Articles: {request.articlesPerSite}")
-    if request.mode == "parallel":
-        print(f"[DEBUG] Threads: {request.threadCount}")
-    print(f"{'=' * 70}\n")
 
     cmd = [
         "python",
@@ -126,15 +114,6 @@ async def start_crawler(request: CrawlerRequest):
 
             # Wait for completion and capture output
             stdout, stderr = process.communicate()
-
-            # Print output for debugging
-            print(f"\n{'=' * 70}")
-            print("[CRAWLER STDOUT]")
-            print(stdout)
-            if stderr:
-                print("\n[CRAWLER STDERR]")
-                print(stderr)
-            print(f"{'=' * 70}\n")
 
             # Update status
             if process.returncode == 0:
@@ -175,17 +154,5 @@ if __name__ == "__main__":
     # Print startup info
     print("\n" + "=" * 70)
     print("NEWS CRAWLER API SERVER")
-    print("=" * 70)
-    print(f"Current directory: {os.getcwd()}")
-    print(f"Script location: {os.path.abspath(__file__)}")
-
-    endpoints_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(endpoints_dir)
-
-    print(f"Project root: {project_root}")
-    print(f"Crawler directory: {os.path.join(project_root, 'crawler')}")
-    print(f"Frontend directory: {os.path.join(project_root, 'frontend')}")
-    print(f"Data directory: {os.path.join(project_root, 'data')}")
-    print("=" * 70 + "\n")
 
     uvicorn.run(app, host="0.0.0.0", port=8000)

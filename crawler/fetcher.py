@@ -10,6 +10,8 @@ IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".mp4", ".
 def load_sites(json_file="../data/news_sites.json"):
     with open(json_file, "r") as f:
         return json.load(f)
+
+
 def extract_links(url):
     """Download a page and extract all <a> links as absolute URLs, excluding image/video/pdf links."""
     try:
@@ -20,19 +22,16 @@ def extract_links(url):
         return []
 
     links = set()
-    parsed_base = urlparse(url).netloc
+    parsed_base = urlparse(url).netloc #traja3 base url https://www.bbc.com/news, netloc = "www.bbc.com"
 
     for a in soup.find_all("a", href=True):
         href = a["href"]
 
-        # Skip links containing non-article extensions
         if any(ext in href.lower() for ext in IMAGE_EXTENSIONS):
             continue
 
-        # Convert to absolute URL
         full = urljoin(url, href)
 
-        # Keep only links from the same domain
         if parsed_base in urlparse(full).netloc:
             links.add(full)
 

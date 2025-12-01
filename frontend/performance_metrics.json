@@ -1,12 +1,37 @@
 {
     "sequential": {
-        "time": 56.43136787414551,
+        "time": 102.0255229473114,
         "articles": 25,
         "speedup": 1.0
     },
-    "threaded_17": {
-        "time": 9.690520763397217,
+    "threaded_2": {
+        "time": 12.865408420562744,
         "articles": 25,
-        "speedup": 5.8233576143086765
+        "speedup": 7.930220293997376
+    },
+    "threaded_4": {
+        "time": 10.615382432937622,
+        "articles": 25,
+        "speedup": 9.611101963763883
+    },
+    "threaded_8": {
+        "time": 13.0974862575531,
+        "articles": 24,
+        "speedup": 7.789702614765104
+    },
+    "multiprocess": {
+        "time": 73.65251588821411,
+        "articles": 25,
+        "speedup": 1.3852279411902282
+    },
+    "asyncio": {
+        "time": 14.687384843826294,
+        "articles": 25,
+        "speedup": 6.946473046915284
+    },
+    "hybrid": {
+        "time": 2.832037925720215,
+        "articles": 0,
+        "speedup": 36.025479044870245
     }
 }

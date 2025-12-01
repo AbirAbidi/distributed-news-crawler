@@ -1,1 +1,4 @@
 venv
+frontend/performance_metrics.json
+frontend/results.json
+data/news.json

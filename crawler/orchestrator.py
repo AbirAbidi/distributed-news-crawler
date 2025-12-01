@@ -11,7 +11,7 @@ from parser import is_probable_article, parse_article
 
 
 class CrawlerMetrics:
-    """Track performance metrics for comparison"""
+    #track performance metrics for comparison
 
     def __init__(self):
         self.sequential_time = 0
@@ -25,23 +25,15 @@ class CrawlerMetrics:
         self.end_time = None
 
 
-# Get the project root directory
 CRAWLER_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CRAWLER_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 
-# Ensure frontend directory exists
-os.makedirs(FRONTEND_DIR, exist_ok=True)
-
-print(f"[DEBUG] Project root: {PROJECT_ROOT}")
-print(f"[DEBUG] Data directory: {DATA_DIR}")
-print(f"[DEBUG] Frontend directory: {FRONTEND_DIR}")
 
 
 # ---------------------------
 # Process each site with progress tracking
-# ---------------------------
 def process_site_with_tracking(site_name, info, max_articles, mode="threaded", num_threads=5):
     """Process a single site and track progress"""
     base_url = info["base_url"]
@@ -56,20 +48,20 @@ def process_site_with_tracking(site_name, info, max_articles, mode="threaded", n
     # STEP 2 – Filter probable articles
     article_links = [u for u in all_links if is_probable_article(u, pattern)]
     article_links = article_links[:max_articles]
-    print(f"    Identified {len(article_links)} probable article URLs")
 
     if not article_links:
         print(f"    [!] No valid article links found for {site_name}")
         return []
 
     # STEP 3 – Parse articles
+    #3leh {len(article_links)} w mouch juste max_articles 5atir yajmou ykounou probable_article < max_articles
     print(f"    [>] Parsing {len(article_links)} articles from {site_name}...")
     results = []
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = {executor.submit(parse_article, url): url for url in article_links}
 
-        for i, future in enumerate(as_completed(futures)):
+        for i, future in enumerate(as_completed(futures)): #ta3ti les futures ili wfew  w i = num article
             url = futures[future]
             try:
                 data = future.result()
@@ -86,16 +78,10 @@ def process_site_with_tracking(site_name, info, max_articles, mode="threaded", n
     print(f"    [+] Completed {site_name}: {len(results)}/{len(article_links)} articles successfully parsed")
 
     return results
-
-
-# ---------------------------
-# SEQUENTIAL CRAWLING (Baseline)
 # ---------------------------
 def sequential_crawl(sites, max_articles):
-    """Traditional sequential approach - one site and article at a time"""
     print("\n" + "=" * 70)
-    print("SEQUENTIAL CRAWLING (Baseline)")
-    print("=" * 70)
+    print("SEQUENTIAL CRAWLING")
     start_time = time.time()
     all_results = []
 
@@ -105,23 +91,16 @@ def sequential_crawl(sites, max_articles):
 
     elapsed = time.time() - start_time
     print(f"\n[*] Sequential completed in {elapsed:.2f}s")
-    print(f"[*] Total articles collected: {len(all_results)}")
 
     return all_results, elapsed
-
-
 # ---------------------------
-# MULTI-THREADING (Current approach)
-# ---------------------------
+# MULTI-THREADING
 def threaded_crawl(sites, max_articles, num_threads=5):
-    """Multi-threading approach with configurable thread pool"""
     print("\n" + "=" * 70)
     print(f"MULTI-THREADED CRAWLING ({num_threads} threads per site)")
-    print("=" * 70)
     start_time = time.time()
     all_results = []
 
-    # Process sites in parallel
     with ThreadPoolExecutor(max_workers=len(sites)) as site_executor:
         site_futures = {
             site_executor.submit(process_site_with_tracking, site_name, info, max_articles, f"threaded_{num_threads}",
@@ -142,23 +121,17 @@ def threaded_crawl(sites, max_articles, num_threads=5):
     print(f"[*] Total articles collected: {len(all_results)}")
 
     return all_results, elapsed
-
-
 # ---------------------------
-# MULTI-PROCESSING (CPU-intensive tasks)
-# ---------------------------
+# MULTI-PROCESSING
 def multiprocess_crawl(sites, max_articles, num_processes=None):
-    """Multi-processing for CPU-bound parsing operations"""
     if num_processes is None:
         num_processes = min(cpu_count(), len(sites))
 
     print("\n" + "=" * 70)
     print(f"MULTI-PROCESSING CRAWLING ({num_processes} processes)")
-    print("=" * 70)
     start_time = time.time()
     all_results = []
 
-    # Collect all URLs first
     all_urls = []
     for site_name, info in sites.items():
         base_url = info["base_url"]
@@ -185,7 +158,7 @@ def multiprocess_crawl(sites, max_articles, num_processes=None):
                     data['crawled_at'] = datetime.now().isoformat()
                     all_results.append(data)
                 completed += 1
-                if completed % 5 == 0:
+                if completed % 5 == 0: #maj kol 5 urls
                     print(f"    Progress: {completed}/{len(all_urls)} articles processed")
             except Exception as e:
                 print(f"    [-] Error parsing {url}: {e}")
@@ -195,26 +168,18 @@ def multiprocess_crawl(sites, max_articles, num_processes=None):
     print(f"[*] Total articles collected: {len(all_results)}")
 
     return all_results, elapsed
-
-
 # ---------------------------
-# ASYNCIO (I/O-bound operations)
-# ---------------------------
+# ASYNCIO
 async def async_parse_article(url, site_name):
-    """Async version of article parsing"""
     loop = asyncio.get_event_loop()
     data = await loop.run_in_executor(None, parse_article, url)
     if data:
         data['site'] = site_name
         data['crawled_at'] = datetime.now().isoformat()
     return data
-
-
 async def async_crawl(sites, max_articles):
-    """Asyncio approach for I/O-bound network requests"""
     print("\n" + "=" * 70)
     print("ASYNCIO CRAWLING")
-    print("=" * 70)
     start_time = time.time()
 
     tasks = []
@@ -239,16 +204,12 @@ async def async_crawl(sites, max_articles):
     print(f"[*] Total articles collected: {len(results)}")
 
     return results, elapsed
-
-
 # ---------------------------
-# HYBRID APPROACH (Combining techniques)
-# ---------------------------
+# HYBRID APPROACH (Combining technique)
 def hybrid_crawl(sites, max_articles, num_processes=2, num_threads=5):
     """Hybrid: multiprocessing for sites, threading for articles within each site"""
     print("\n" + "=" * 70)
     print(f"HYBRID CRAWLING ({num_processes} processes x {num_threads} threads)")
-    print("=" * 70)
     start_time = time.time()
 
     def process_site(site_data):
@@ -269,25 +230,15 @@ def hybrid_crawl(sites, max_articles, num_processes=2, num_threads=5):
     print(f"[*] Total articles collected: {len(all_results)}")
 
     return all_results, elapsed
-
-
 # ---------------------------
 # PARALLEL vs SEQUENTIAL COMPARISON
-# ---------------------------
 def run_parallel_vs_sequential_comparison(sites_json, max_articles, num_threads):
-    """Compare ONLY parallel vs sequential for user-chosen thread count"""
     sites = load_sites(sites_json)
 
     print("\n" + "=" * 70)
     print("PARALLEL vs SEQUENTIAL COMPARISON")
-    print("=" * 70)
-    print(f"[*] News sources: {', '.join(sites.keys())}")
-    print(f"[*] Articles per site: {max_articles}")
-    print(f"[*] Threads (Parallel): {num_threads}")
-    print("=" * 70)
 
     results_comparison = {}
-    final_results = None
 
     # 1. Sequential
     print("\n[1/2] Running Sequential...")
@@ -299,7 +250,7 @@ def run_parallel_vs_sequential_comparison(sites_json, max_articles, num_threads)
     }
     final_results = seq_results
 
-    # 2. Threaded with user-chosen thread count
+    # 2. Threaded
     print(f"\n[2/2] Running Parallel ({num_threads} threads)...")
     parallel_results, parallel_time = threaded_crawl(sites, max_articles, num_threads)
     results_comparison[f'threaded_{num_threads}'] = {
@@ -308,23 +259,12 @@ def run_parallel_vs_sequential_comparison(sites_json, max_articles, num_threads)
         'speedup': seq_time / parallel_time if parallel_time > 0 else 0
     }
 
-    # Print results table
     print("\n" + "=" * 70)
     print("COMPARISON RESULTS")
-    print("=" * 70)
-    print(f"{'Method':<25} {'Time (s)':<12} {'Articles':<10} {'Speedup':<10}")
-    print("-" * 70)
-    for method, data in results_comparison.items():
-        print(f"{method:<25} {data['time']:>10.2f}s  {data['articles']:>8}  {data['speedup']:>8.2f}x")
-    print("=" * 70)
-
     # Find best method
     best_method = min(results_comparison.items(), key=lambda x: x[1]['time'])
-    print(f"\n[+] WINNER: {best_method[0].upper()}")
-    print(f"    Time: {best_method[1]['time']:.2f}s")
-    print(f"    Speedup: {best_method[1]['speedup']:.2f}x over sequential")
 
-    # Save results using absolute paths
+    # Save results
     results_file = os.path.join(FRONTEND_DIR, "results.json")
     metrics_file = os.path.join(FRONTEND_DIR, "performance_metrics.json")
 
@@ -343,14 +283,9 @@ def run_parallel_vs_sequential_comparison(sites_json, max_articles, num_threads)
     except Exception as e:
         print(f"    [-] Error saving metrics: {e}")
 
-    print("\n[+] Comparison complete! Open frontend/index.html to view results in dashboard.")
-
     return results_comparison
-
-
 # ---------------------------
 # FULL COMPARISON RUNNER (All 7 methods)
-# ---------------------------
 def run_comparison(sites_json, max_articles=5):
     """Run all approaches and compare performance"""
     sites = load_sites(sites_json)
@@ -415,20 +350,9 @@ def run_comparison(sites_json, max_articles=5):
     # Print results table
     print("\n" + "=" * 70)
     print("PERFORMANCE COMPARISON RESULTS")
-    print("=" * 70)
-    print(f"{'Method':<25} {'Time (s)':<12} {'Articles':<10} {'Speedup':<10}")
-    print("-" * 70)
-    for method, data in results_comparison.items():
-        print(f"{method:<25} {data['time']:>10.2f}s  {data['articles']:>8}  {data['speedup']:>8.2f}x")
-    print("=" * 70)
-
     # Find best method
     best_method = min(results_comparison.items(), key=lambda x: x[1]['time'])
-    print(f"\n[+] WINNER: {best_method[0].upper()}")
-    print(f"    Time: {best_method[1]['time']:.2f}s")
-    print(f"    Speedup: {best_method[1]['speedup']:.2f}x over sequential")
 
-    # Save results using absolute paths
     results_file = os.path.join(FRONTEND_DIR, "results.json")
     metrics_file = os.path.join(FRONTEND_DIR, "performance_metrics.json")
 
@@ -447,25 +371,19 @@ def run_comparison(sites_json, max_articles=5):
     except Exception as e:
         print(f"    [-] Error saving metrics: {e}")
 
-    print("\n[+] All done! Open frontend/index.html to view results in dashboard.")
-
     return results_comparison
 
 
-# ---------------------------
-# MAIN ENTRY POINT
-# ---------------------------
+
 if __name__ == "__main__":
     import sys
 
     mode = sys.argv[1] if len(sys.argv) > 1 else "comparison"
     max_articles = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 
-    # Use absolute path to news_sites.json
     sites_json = os.path.join(DATA_DIR, "news_sites.json")
     sites = load_sites(sites_json)
 
-    # Absolute paths for results
     results_file = os.path.join(FRONTEND_DIR, "results.json")
 
     if mode == "sequential":
@@ -489,4 +407,3 @@ if __name__ == "__main__":
 
     else:
         print(f"[-] Unknown mode: {mode}")
-        print("[*] Available modes: sequential, threaded, comparison")
